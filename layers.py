@@ -30,12 +30,13 @@ def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, p
                                         biases_initializer=tf.constant_initializer(0.0))
         if do_norm:
             conv = instance_norm(conv)
+        relu_conv = conv
         if do_relu:
             if (relufactor == 0):
-                conv = tf.nn.relu(conv, "relu")
+                relu_conv = tf.nn.relu(conv, "relu")
             else:
-                conv = lrelu(conv, relufactor, "lrelu")
-        return conv
+                relu_conv = lrelu(conv, relufactor, "lrelu")
+        return conv, relu_conv
 
 
 def general_deconv2d(inputconv, outshape, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding="VALID",
@@ -46,9 +47,10 @@ def general_deconv2d(inputconv, outshape, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, st
                                                   biases_initializer=tf.constant_initializer(0.0))
         if do_norm:
             conv = instance_norm(conv)
+        relu_conv = conv
         if do_relu:
             if (relufactor == 0):
-                conv = tf.nn.relu(conv, "relu")
+                relu_conv = tf.nn.relu(conv, "relu")
             else:
-                conv = lrelu(conv, relufactor, "lrelu")
-        return conv
+                relu_conv = lrelu(conv, relufactor, "lrelu")
+        return conv, relu_conv

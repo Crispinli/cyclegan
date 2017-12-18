@@ -22,14 +22,12 @@ class CycleGAN():
     def input_setup(self):
 
         # 获取图像的名字，得到文件名列表
-        filenames_A = tf.train.match_filenames_once("./input/horse2zebra/trainA/*.jpg")
-        self.queue_length_A = tf.size(filenames_A)
-        filenames_B = tf.train.match_filenames_once("./input/horse2zebra/trainB/*.jpg")
-        self.queue_length_B = tf.size(filenames_B)
+        self.filenames_A = tf.train.match_filenames_once("./input/horse2zebra/trainA/*.jpg")
+        self.filenames_B = tf.train.match_filenames_once("./input/horse2zebra/trainB/*.jpg")
 
         # 把文件名列表转换成队列
-        filename_queue_A = tf.train.string_input_producer(filenames_A)
-        filename_queue_B = tf.train.string_input_producer(filenames_B)
+        filename_queue_A = tf.train.string_input_producer(self.filenames_A)
+        filename_queue_B = tf.train.string_input_producer(self.filenames_B)
 
         # 从队列中读取图像
         image_reader = tf.WholeFileReader()
@@ -74,6 +72,7 @@ class CycleGAN():
 
         self.fake_pool_A = tf.placeholder(tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_A")
         self.fake_pool_B = tf.placeholder(tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_B")
+
         self.num_fake_inputs = 0
 
         self.lr = tf.placeholder(tf.float32, shape=[], name="lr")
@@ -229,11 +228,10 @@ class CycleGAN():
                 chkpt_fname = tf.train.latest_checkpoint(ckpt_dir)
                 if chkpt_fname is not None:
                     saver.restore(sess, chkpt_fname)
-
             print("Training Loop...")
             for epoch in range(0, max_epoch):
-                curr_lr = 0.0002 - epoch * 0.00001
                 print("In the epoch ", epoch)
+                curr_lr = 0.0002 - epoch * 0.00001
                 if (save_training_images):
                     print("Save the training images...")
                     self.save_training_images(sess, epoch)
@@ -330,7 +328,7 @@ class CycleGAN():
 def main():
     model = CycleGAN()
     if to_train:
-        model.train()
+         model.train()
     # if to_test:
     #     model.test()
 
