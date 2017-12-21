@@ -36,11 +36,11 @@ def generator(inputgen, name="generator"):
         back0 = denorm0 - inputgen
 
         norm2, o_c2 = conv2d(o_c1, ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "encoder2", relufactor=0.2)
-        denorm1, _ = deconv2d(o_c2, [batch_size, 256, 256, ngf], ngf, ks, ks, 2, 2, 0.02, "SAME", "demorm1")
+        denorm1, _ = deconv2d(o_c2, [batch_size, 256, 256, ngf], ngf, ks, ks, 2, 2, 0.02, "SAME", "denorm1")
         back1 = denorm1 - norm1
 
         norm3, o_c3 = conv2d(o_c2, ngf * 4, ks, ks, 2, 2, 0.02, "SAME", "encoder3", relufactor=0.2)
-        denorm2, _ = deconv2d(o_c3, [batch_size, 128, 128, ngf * 2], ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "demorm2")
+        denorm2, _ = deconv2d(o_c3, [batch_size, 128, 128, ngf * 2], ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "denorm2")
         back2 = denorm2 - norm2
 
         o_r1 = resnet_block(o_c3, ngf * 4, "r1")
