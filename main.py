@@ -1,3 +1,23 @@
+'''
+算法描述：
+    （1）模型整体结构：
+        a. 整体结构类似 CycleGAN 模型，并且进行了改进
+        b. 模型中的包含两个 GAN 模型，并同时进行训练
+        c. 首先对其中一个 GAN 的判别器进行 5 次训练，然后对生成器进行一次训练，之后是以相同方式训练另一个 GAN
+        d. 每个 GAN 当中的生成器 generator 和判别器 discriminator 的结构相同
+    （2）生成器 generator 的结构：
+        a. 整体结构类似 U-Net 模型的形式，并且进行了改进
+        b. 在模型的 bottom 部分，包含 9 个残差块
+        c. 在 encoder 部分，下一层结果的转置卷积与上一层的结果相减，然后再与 decoder 部分的对应结果进行拼接
+    （3）判别器 discriminator 结构：
+        a. 整体结构为全卷积网络 FCN 的形式
+        b. 输出是一个经过编码操作的图像块
+        c. 输入是随机截取的图像块 image patch，尺寸为 [1, 70, 70, 3]
+    （4）模型的损失函数：
+        a. 两个 GAN 的损失函数具有相同的形式
+        b. 损失函数类似 WGAN_GP 的形式，并且进行了改进
+        c. 判别器损失的计算方式不变，在生成器损失中加入 cycle loss 项
+'''
 import numpy as np
 from scipy.misc import imsave
 import os
