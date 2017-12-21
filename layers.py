@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 
-def lrelu(x, leak=0.2, name="lrelu", alt_relu_impl=False):
+def leaky_relu(x, leak=0.2, name="leaky_relu", alt_relu_impl=False):
     with tf.variable_scope(name):
         if alt_relu_impl:
             f1 = 0.5 * (1 + leak)
@@ -22,8 +22,8 @@ def instance_norm(x):
         return out
 
 
-def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding="VALID", name="conv2d",
-                   do_norm=True, do_relu=True, relufactor=0):
+def conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding="VALID", name="conv2d",
+           do_norm=True, do_relu=True, relufactor=0):
     with tf.variable_scope(name):
         conv = tf.contrib.layers.conv2d(inputconv, o_d, f_w, s_w, padding, activation_fn=None,
                                         weights_initializer=tf.truncated_normal_initializer(stddev=stddev),
@@ -35,12 +35,12 @@ def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, p
             if (relufactor == 0):
                 relu_conv = tf.nn.relu(conv, "relu")
             else:
-                relu_conv = lrelu(conv, relufactor, "lrelu")
+                relu_conv = leaky_relu(conv, relufactor, "leaky_relu")
         return conv, relu_conv
 
 
-def general_deconv2d(inputconv, outshape, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding="VALID",
-                     name="deconv2d", do_norm=True, do_relu=True, relufactor=0):
+def deconv2d(inputconv, outshape, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding="VALID",
+             name="deconv2d", do_norm=True, do_relu=True, relufactor=0):
     with tf.variable_scope(name):
         conv = tf.contrib.layers.conv2d_transpose(inputconv, o_d, [f_h, f_w], [s_h, s_w], padding, activation_fn=None,
                                                   weights_initializer=tf.truncated_normal_initializer(stddev=stddev),
@@ -52,5 +52,5 @@ def general_deconv2d(inputconv, outshape, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, st
             if (relufactor == 0):
                 relu_conv = tf.nn.relu(conv, "relu")
             else:
-                relu_conv = lrelu(conv, relufactor, "lrelu")
+                relu_conv = leaky_relu(conv, relufactor, "leaky_relu")
         return conv, relu_conv

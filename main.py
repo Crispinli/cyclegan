@@ -2,7 +2,16 @@ import numpy as np
 from scipy.misc import imsave
 import os
 import random
-from model import *
+import tensorflow as tf
+from model import generator
+from model import discriminator
+
+img_height = 256  # 图像高度
+img_width = 256  # 图像宽度
+img_layer = 3  # 图像通道
+img_size = img_height * img_width  # 图像尺寸
+
+batch_size = 1  # 一个批次的数据中图像的个数
 
 to_train = True  # 是否训练
 to_test = True  # 是否测试
@@ -13,7 +22,7 @@ ckpt_dir = "./output/checkpoint"  # 检查点路径
 max_images = 1000  # 数组中最多存储的训练/测试数据（batch_size, img_height, img_width, img_layer）数目
 pool_size = 50  # 用于更新D的假图像的批次数
 max_epoch = 20  # 每次训练的epoch数目
-n_critic = 1  # 判别器训练的次数
+n_critic = 5  # 判别器训练的次数
 
 save_training_images = True  # 是否存储训练数据
 
@@ -80,22 +89,22 @@ class CycleGAN():
         with tf.variable_scope("Model") as scope:
             self.scope = scope
 
-            self.fake_B = build_generator_resnet_9blocks(self.input_A, name="g_A")
-            self.fake_A = build_generator_resnet_9blocks(self.input_B, name="g_B")
-            self.rec_A = build_gen_discriminator(self.input_A, "d_A")
-            self.rec_B = build_gen_discriminator(self.input_B, "d_B")
+            self.fake_B = generator(self.input_A, name="g_A")
+            self.fake_A = generator(self.input_B, name="g_B")
+            self.rec_A = discriminator(self.input_A, "d_A")
+            self.rec_B = discriminator(self.input_B, "d_B")
 
             scope.reuse_variables()
 
-            self.fake_rec_A = build_gen_discriminator(self.fake_A, "d_A")
-            self.fake_rec_B = build_gen_discriminator(self.fake_B, "d_B")
-            self.cyc_A = build_generator_resnet_9blocks(self.fake_B, "g_B")
-            self.cyc_B = build_generator_resnet_9blocks(self.fake_A, "g_A")
+            self.fake_rec_A = discriminator(self.fake_A, "d_A")
+            self.fake_rec_B = discriminator(self.fake_B, "d_B")
+            self.cyc_A = generator(self.fake_B, "g_B")
+            self.cyc_B = generator(self.fake_A, "g_A")
 
             scope.reuse_variables()
 
-            self.fake_pool_rec_A = build_gen_discriminator(self.fake_pool_A, "d_A")
-            self.fake_pool_rec_B = build_gen_discriminator(self.fake_pool_B, "d_B")
+            self.fake_pool_rec_A = discriminator(self.fake_pool_A, "d_A")
+            self.fake_pool_rec_B = discriminator(self.fake_pool_B, "d_B")
 
     def loss_calc(self):
 
@@ -118,7 +127,7 @@ class CycleGAN():
         interpolates_B = self.input_B + alpha_B * (self.fake_B - self.input_B)
         with tf.variable_scope(self.scope) as scope_B:
             scope_B.reuse_variables()
-            gradients_B = tf.gradients(build_gen_discriminator(interpolates_B, name="d_B"), [interpolates_B])[0]
+            gradients_B = tf.gradients(discriminator(interpolates_B, name="d_B"), [interpolates_B])[0]
         slopes_B = tf.sqrt(tf.reduce_sum(tf.square(gradients_B), reduction_indices=[1]))
         gradients_penalty_B = tf.reduce_mean((slopes_B - 1.0) ** 2)
         disc_loss_B += 10 * gradients_penalty_B
@@ -131,13 +140,13 @@ class CycleGAN():
         interpolates_A = self.input_A + alpha_A * (self.fake_A - self.input_A)
         with tf.variable_scope(self.scope) as scope_A:
             scope_A.reuse_variables()
-            gradients_A = tf.gradients(build_gen_discriminator(interpolates_A, name="d_A"), [interpolates_A])[0]
+            gradients_A = tf.gradients(discriminator(interpolates_A, name="d_A"), [interpolates_A])[0]
         slopes_A = tf.sqrt(tf.reduce_sum(tf.square(gradients_A), reduction_indices=[1]))
         gradients_penalty_A = tf.reduce_mean((slopes_A - 1.0) ** 2)
         disc_loss_A += 10 * gradients_penalty_A
 
-        self.g_loss_A = cyc_loss * 10 + gen_loss_A  # g_A的损失函数
-        self.g_loss_B = cyc_loss * 10 + gen_loss_B  # g_B的损失函数
+        self.g_loss_A = cyc_loss * 10 + gen_loss_A * 5  # g_A的损失函数
+        self.g_loss_B = cyc_loss * 10 + gen_loss_B * 5  # g_B的损失函数
         self.d_loss_A = disc_loss_A  # d_A的损失函数
         self.d_loss_B = disc_loss_B  # d_B的损失函数
 
@@ -328,7 +337,7 @@ class CycleGAN():
 def main():
     model = CycleGAN()
     if to_train:
-         model.train()
+        model.train()
     # if to_test:
     #     model.test()
 
