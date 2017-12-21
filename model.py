@@ -32,7 +32,7 @@ def generator(inputgen, name="generator"):
 
         pad_input = tf.pad(inputgen, [[0, 0], [ks, ks], [ks, ks], [0, 0]], "REFLECT")
         norm1, o_c1 = conv2d(pad_input, ngf, f, f, 1, 1, 0.02, name="encoder1", relufactor=0.2)
-        denorm0, _ = conv2d(o_c1, 3, f, f, 1, 1, 0.02, name="denorm0", relufactor=0.2)
+        denorm0, _ = conv2d(o_c1, 3, f, f, 1, 1, 0.02, "SAME", "denorm0", relufactor=0.2)
         back0 = denorm0 - inputgen
 
         norm2, o_c2 = conv2d(o_c1, ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "encoder2", relufactor=0.2)
