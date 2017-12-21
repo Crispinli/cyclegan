@@ -26,14 +26,18 @@ def build_generator_resnet_9blocks(inputgen, name="generator"):
         f = 7
         ks = 3
 
-        # noise = tf.get_variable(name="noise", dtype="tf.float32", trainable=False, shape=[1, 256, 256, 3],
-        #                         initializer=tf.truncated_normal_initializer(mean=0.0, stddev=1.0))
-        # input = tf.add(inputgen, noise)
-
         pad_input = tf.pad(inputgen, [[0, 0], [ks, ks], [ks, ks], [0, 0]], "REFLECT")
-        norm1, o_c1 = general_conv2d(pad_input, ngf, f, f, 1, 1, 0.02, name="c1", relufactor=0.2)
-        norm2, o_c2 = general_conv2d(o_c1, ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "c2", relufactor=0.2)
-        norm3, o_c3 = general_conv2d(o_c2, ngf * 4, ks, ks, 2, 2, 0.02, "SAME", "c3", relufactor=0.2)
+        norm1, o_c1 = general_conv2d(pad_input, ngf, f, f, 1, 1, 0.02, name="encoder1", relufactor=0.2)
+        denorm0, _ = general_conv2d(o_c1, 3, f, f, 1, 1, 0.02, name="denorm0", relufactor=0.2)
+        back0 = denorm0 - inputgen
+
+        norm2, o_c2 = general_conv2d(o_c1, ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "encoder2", relufactor=0.2)
+        denorm1, _ = general_deconv2d(o_c2, [batch_size, 256, 256, ngf], ngf, ks, ks, 2, 2, 0.02, "SAME", "demorm1")
+        back1 = denorm1 - norm1
+
+        norm3, o_c3 = general_conv2d(o_c2, ngf * 4, ks, ks, 2, 2, 0.02, "SAME", "encoder3", relufactor=0.2)
+        denorm2, _ = general_deconv2d(o_c3, [batch_size, 128, 128, ngf * 2], ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "demorm2")
+        back2 = denorm2 - norm2
 
         o_r1 = build_resnet_block(o_c3, ngf * 4, "r1")
         o_r2 = build_resnet_block(o_r1, ngf * 4, "r2")
@@ -45,29 +49,33 @@ def build_generator_resnet_9blocks(inputgen, name="generator"):
         o_r8 = build_resnet_block(o_r7, ngf * 4, "r8")
         o_r9 = build_resnet_block(o_r8, ngf * 4, "r9")
 
-        norm4, _ = general_deconv2d(o_r9, [batch_size, 128, 128, ngf * 2], ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "c4")
-        o_c4_c2 = tf.concat(axis=3, values=[norm4, norm2], name="o_c4_c2")
+        norm4, _ = general_deconv2d(o_r9, [batch_size, 128, 128, ngf * 2], ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "decoder1")
+        o_c4_c2 = tf.concat(axis=3, values=[norm4, back2])
         _, o_c4 = general_conv2d(o_c4_c2, ngf * 2, ks, ks, 1, 1, 0.02, "SAME", "o_c4_merge")
-        norm5, _ = general_deconv2d(o_c4, [batch_size, 256, 256, ngf], ngf, ks, ks, 2, 2, 0.02, "SAME", "c5")
-        o_c5_c1 = tf.concat(axis=3, values=[norm5, norm1], name="o_c5_c1")
+
+        norm5, _ = general_deconv2d(o_c4, [batch_size, 256, 256, ngf], ngf, ks, ks, 2, 2, 0.02, "SAME", "decoder2")
+        o_c5_c1 = tf.concat(axis=3, values=[norm5, back1])
         _, o_c5 = general_conv2d(o_c5_c1, ngf, ks, ks, 1, 1, 0.02, "SAME", "o_c5_merge")
-        norm6, _ = general_conv2d(o_c5, img_layer, f, f, 1, 1, 0.02, "SAME", "c6")
-        o_c6_input = tf.concat(axis=3, values=[norm6, inputgen], name="o_c6_input")
+
+        norm6, _ = general_conv2d(o_c5, img_layer, f, f, 1, 1, 0.02, "SAME", "output")
+        o_c6_input = tf.concat(axis=3, values=[norm6, back0])
         _, o_c6 = general_conv2d(o_c6_input, img_layer, f, f, 1, 1, 0.02, "SAME", "o_c6_merge", do_relu=False)
 
-        out_gen = tf.nn.tanh(o_c6, "t1")
+        out_gen = tf.nn.tanh(x = o_c6)
 
         return out_gen
 
 
 def build_gen_discriminator(inputdisc, name="discriminator"):
+
     with tf.variable_scope(name):
         f = 4
 
-        _, o_c1 = general_conv2d(inputdisc, ndf, f, f, 2, 2, 0.02, "SAME", "c1", do_norm=False, relufactor=0.2)
-        _, o_c2 = general_conv2d(o_c1, ndf * 2, f, f, 2, 2, 0.02, "SAME", "c2", relufactor=0.2)
-        _, o_c3 = general_conv2d(o_c2, ndf * 4, f, f, 2, 2, 0.02, "SAME", "c3", relufactor=0.2)
-        _, o_c4 = general_conv2d(o_c3, ndf * 8, f, f, 1, 1, 0.02, "SAME", "c4", relufactor=0.2)
-        _, o_c5 = general_conv2d(o_c4, 1, f, f, 1, 1, 0.02, "SAME", "c5", do_norm=False, do_relu=False)
+        patch_input = tf.random_crop(inputdisc, [1, 70, 70, 3])
+        _, o_c1 = general_conv2d(patch_input, ndf, f, f, 2, 2, 0.02, "SAME", "d1", do_norm=False, relufactor=0.2)
+        _, o_c2 = general_conv2d(o_c1, ndf * 2, f, f, 2, 2, 0.02, "SAME", "d2", relufactor=0.2)
+        _, o_c3 = general_conv2d(o_c2, ndf * 4, f, f, 2, 2, 0.02, "SAME", "d3", relufactor=0.2)
+        _, o_c4 = general_conv2d(o_c3, ndf * 8, f, f, 1, 1, 0.02, "SAME", "d4", relufactor=0.2)
+        _, o_c5 = general_conv2d(o_c4, 1, f, f, 1, 1, 0.02, "SAME", "d5", do_norm=False, do_relu=False)
 
         return o_c5

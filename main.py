@@ -13,7 +13,7 @@ ckpt_dir = "./output/checkpoint"  # 检查点路径
 max_images = 1000  # 数组中最多存储的训练/测试数据（batch_size, img_height, img_width, img_layer）数目
 pool_size = 50  # 用于更新D的假图像的批次数
 max_epoch = 20  # 每次训练的epoch数目
-n_critic = 1  # 判别器训练的次数
+n_critic = 5  # 判别器训练的次数
 
 save_training_images = True  # 是否存储训练数据
 
