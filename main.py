@@ -165,8 +165,8 @@ class CycleGAN():
         gradients_penalty_A = tf.reduce_mean((slopes_A - 1.0) ** 2)
         disc_loss_A += 10 * gradients_penalty_A
 
-        self.g_loss_A = cyc_loss * 10 + gen_loss_A * 5  # g_A的损失函数
-        self.g_loss_B = cyc_loss * 10 + gen_loss_B * 5  # g_B的损失函数
+        self.g_loss_A = cyc_loss * 10 + gen_loss_A  # g_A的损失函数
+        self.g_loss_B = cyc_loss * 10 + gen_loss_B  # g_B的损失函数
         self.d_loss_A = disc_loss_A  # d_A的损失函数
         self.d_loss_B = disc_loss_B  # d_B的损失函数
 
