@@ -51,10 +51,8 @@ class CycleGAN():
     def input_setup(self):
 
         # 获取图像的名字，得到文件名列表
-        self.filenames_A = tf.train.match_filenames_once(
-            "./input/horse2zebra/trainA/*.jpg")
-        self.filenames_B = tf.train.match_filenames_once(
-            "./input/horse2zebra/trainB/*.jpg")
+        self.filenames_A = tf.train.match_filenames_once("./input/horse2zebra/trainA/*.jpg")
+        self.filenames_B = tf.train.match_filenames_once("./input/horse2zebra/trainB/*.jpg")
 
         # 把文件名列表转换成队列
         filename_queue_A = tf.train.string_input_producer(self.filenames_A)
@@ -77,42 +75,32 @@ class CycleGAN():
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        self.fake_images_A = np.zeros(
-            (pool_size, 1, img_height, img_width, img_layer))
-        self.fake_images_B = np.zeros(
-            (pool_size, 1, img_height, img_width, img_layer))
+        self.fake_images_A = np.zeros((pool_size, 1, img_height, img_width, img_layer))
+        self.fake_images_B = np.zeros((pool_size, 1, img_height, img_width, img_layer))
 
-        self.A_input = np.zeros(
-            (max_images, batch_size, img_height, img_width, img_layer))
-        self.B_input = np.zeros(
-            (max_images, batch_size, img_height, img_width, img_layer))
+        self.A_input = np.zeros((max_images, batch_size, img_height, img_width, img_layer))
+        self.B_input = np.zeros((max_images, batch_size, img_height, img_width, img_layer))
 
         for i in range(max_images):
             image_tensor = sess.run(self.image_A)
             if (image_tensor.size == img_size * batch_size * img_layer):
-                self.A_input[i] = image_tensor.reshape(
-                    (batch_size, img_height, img_width, img_layer))
+                self.A_input[i] = image_tensor.reshape((batch_size, img_height, img_width, img_layer))
 
         for i in range(max_images):
             image_tensor = sess.run(self.image_B)
             if (image_tensor.size == img_size * batch_size * img_layer):
-                self.B_input[i] = image_tensor.reshape(
-                    (batch_size, img_height, img_width, img_layer))
+                self.B_input[i] = image_tensor.reshape((batch_size, img_height, img_width, img_layer))
 
         coord.request_stop()
         coord.join(threads)
 
     def model_setup(self):
 
-        self.input_A = tf.placeholder(
-            tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
-        self.input_B = tf.placeholder(
-            tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
+        self.input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
+        self.input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
 
-        self.fake_pool_A = tf.placeholder(
-            tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_A")
-        self.fake_pool_B = tf.placeholder(
-            tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_B")
+        self.fake_pool_A = tf.placeholder(tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_A")
+        self.fake_pool_B = tf.placeholder(tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_B")
 
         self.num_fake_inputs = 0
 
@@ -143,8 +131,7 @@ class CycleGAN():
         ####################
         # cycle loss
         ####################
-        cyc_loss = tf.reduce_mean(tf.abs(
-            self.input_A - self.cyc_A)) + tf.reduce_mean(tf.abs(self.input_B - self.cyc_B))
+        cyc_loss = tf.reduce_mean(tf.abs(self.input_A - self.cyc_A)) + tf.reduce_mean(tf.abs(self.input_B - self.cyc_B))
 
         ####################
         # standard generator loss of g_A and g_B
@@ -155,34 +142,26 @@ class CycleGAN():
         ####################
         # discriminator loss with gradient penalty of d_B
         ####################
-        disc_loss_B = tf.reduce_mean(
-            self.fake_rec_B) - tf.reduce_mean(self.rec_B)
-        alpha_B = tf.random_uniform(
-            shape=[batch_size, 1], minval=0.0, maxval=1.0)
+        disc_loss_B = tf.reduce_mean(self.fake_rec_B) - tf.reduce_mean(self.rec_B)
+        alpha_B = tf.random_uniform(shape=[batch_size, 1], minval=0.0, maxval=1.0)
         interpolates_B = self.input_B + alpha_B * (self.fake_B - self.input_B)
         with tf.variable_scope(self.scope) as scope_B:
             scope_B.reuse_variables()
-            gradients_B = tf.gradients(discriminator(
-                interpolates_B, name="d_B"), [interpolates_B])[0]
-        slopes_B = tf.sqrt(tf.reduce_sum(
-            tf.square(gradients_B), reduction_indices=[1]))
+            gradients_B = tf.gradients(discriminator(interpolates_B, name="d_B"), [interpolates_B])[0]
+        slopes_B = tf.sqrt(tf.reduce_sum(tf.square(gradients_B), reduction_indices=[1]))
         gradients_penalty_B = tf.reduce_mean((slopes_B - 1.0) ** 2)
         disc_loss_B += 10 * gradients_penalty_B
 
         ####################
         # discriminator loss with gradient penalty of d_A
         ####################
-        disc_loss_A = tf.reduce_mean(
-            self.fake_rec_A) - tf.reduce_mean(self.rec_A)
-        alpha_A = tf.random_uniform(
-            shape=[batch_size, 1], minval=0.0, maxval=1.0)
+        disc_loss_A = tf.reduce_mean(self.fake_rec_A) - tf.reduce_mean(self.rec_A)
+        alpha_A = tf.random_uniform(shape=[batch_size, 1], minval=0.0, maxval=1.0)
         interpolates_A = self.input_A + alpha_A * (self.fake_A - self.input_A)
         with tf.variable_scope(self.scope) as scope_A:
             scope_A.reuse_variables()
-            gradients_A = tf.gradients(discriminator(
-                interpolates_A, name="d_A"), [interpolates_A])[0]
-        slopes_A = tf.sqrt(tf.reduce_sum(
-            tf.square(gradients_A), reduction_indices=[1]))
+            gradients_A = tf.gradients(discriminator(interpolates_A, name="d_A"), [interpolates_A])[0]
+        slopes_A = tf.sqrt(tf.reduce_sum(tf.square(gradients_A), reduction_indices=[1]))
         gradients_penalty_A = tf.reduce_mean((slopes_A - 1.0) ** 2)
         disc_loss_A += 10 * gradients_penalty_A
 
@@ -205,8 +184,7 @@ class CycleGAN():
         self.g_A_trainer = optimizer.minimize(self.g_loss_A, var_list=g_A_vars)
         self.g_B_trainer = optimizer.minimize(self.g_loss_B, var_list=g_B_vars)
 
-        for var in self.model_vars:
-            print(var.name)
+        for var in self.model_vars: print(var.name)
 
         self.g_A_loss_summ = tf.summary.scalar("g_A_loss", self.g_loss_A)
         self.g_B_loss_summ = tf.summary.scalar("g_B_loss", self.g_loss_B)
@@ -221,8 +199,7 @@ class CycleGAN():
         for i in range(0, 10):
             fake_A_temp, fake_B_temp, cyc_A_temp, cyc_B_temp = sess.run(
                 [self.fake_A, self.fake_B, self.cyc_A, self.cyc_B],
-                feed_dict={
-                    self.input_A: self.A_input[i], self.input_B: self.B_input[i]}
+                feed_dict={self.input_A: self.A_input[i], self.input_B: self.B_input[i]}
             )
             imsave("./output/imgs/fakeB_" + str(epoch) + "_" + str(i) + ".jpg",
                    ((fake_A_temp[0] + 1) * 127.5).astype(np.uint8))
@@ -253,6 +230,7 @@ class CycleGAN():
                 return fake
 
     def train(self):
+
         ''' Training Function '''
 
         if not os.path.exists(log_dir):
@@ -270,8 +248,7 @@ class CycleGAN():
             print("The log writer...")
             writer = tf.summary.FileWriter(logdir=log_dir, graph=sess.graph)
             print("Initializing the global variables...")
-            init = tf.group(tf.global_variables_initializer(),
-                            tf.local_variables_initializer())
+            init = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
             sess.run(init)
             print("Read input to nd array...")
             self.input_read(sess)
@@ -294,12 +271,9 @@ class CycleGAN():
 
                     # Optimizing the D_B network
                     for i in range(n_critic):
-                        iter = (ptr + i) if (ptr +
-                                             i) < 100 else (ptr + i) - 100
-                        fake_B = sess.run(self.fake_B, feed_dict={
-                                          self.input_A: self.A_input[iter]})
-                        fake_B_temp = self.fake_image_pool(
-                            self.num_fake_inputs, fake_B, self.fake_images_B)
+                        iter = (ptr + i) if (ptr + i) < 100 else (ptr + i) - 100
+                        fake_B = sess.run(self.fake_B, feed_dict={self.input_A: self.A_input[iter]})
+                        fake_B_temp = self.fake_image_pool(self.num_fake_inputs, fake_B, self.fake_images_B)
                         _, summary_str = sess.run(
                             [self.d_B_trainer, self.d_B_loss_summ],
                             feed_dict={
@@ -322,12 +296,9 @@ class CycleGAN():
 
                     # Optimizing the D_A network
                     for i in range(n_critic):
-                        iter = (ptr + i) if (ptr +
-                                             i) < 100 else (ptr + i) - 100
-                        fake_A = sess.run(self.fake_A, feed_dict={
-                                          self.input_B: self.B_input[iter]})
-                        fake_A_temp = self.fake_image_pool(
-                            self.num_fake_inputs, fake_A, self.fake_images_A)
+                        iter = (ptr + i) if (ptr + i) < 100 else (ptr + i) - 100
+                        fake_A = sess.run(self.fake_A, feed_dict={self.input_B: self.B_input[iter]})
+                        fake_A_temp = self.fake_image_pool(self.num_fake_inputs, fake_A, self.fake_images_A)
                         _, summary_str = sess.run(
                             [self.d_A_trainer, self.d_A_loss_summ],
                             feed_dict={
@@ -350,17 +321,16 @@ class CycleGAN():
 
                     self.num_fake_inputs += 1
                 print("Save the model...")
-                saver.save(sess, os.path.join(
-                    ckpt_dir, "cyclegan"), global_step=epoch)
+                saver.save(sess, os.path.join(ckpt_dir, "cyclegan"), global_step=epoch)
 
     def test(self):
+
         ''' Testing Function'''
 
         self.input_setup()
         self.model_setup()
         saver = tf.train.Saver()
-        init = tf.group(tf.global_variables_initializer(),
-                        tf.local_variables_initializer())
+        init = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
         with tf.Session() as sess:
             sess.run(init)
             self.input_read(sess)
@@ -378,22 +348,18 @@ class CycleGAN():
                         self.input_A: self.A_input[i],
                         self.input_B: self.B_input[i]}
                 )
-                imsave("./output/test/fakeB_" + str(i) + ".jpg",
-                       ((fake_A_temp[0] + 1) * 127.5).astype(np.uint8))
-                imsave("./output/test/fakeA_" + str(i) + ".jpg",
-                       ((fake_B_temp[0] + 1) * 127.5).astype(np.uint8))
-                imsave("./output/test/inputA_" + str(i) + ".jpg",
-                       ((self.A_input[i][0] + 1) * 127.5).astype(np.uint8))
-                imsave("./output/test/inputB_" + str(i) + ".jpg",
-                       ((self.B_input[i][0] + 1) * 127.5).astype(np.uint8))
+                imsave("./output/test/fakeB_" + str(i) + ".jpg", ((fake_A_temp[0] + 1) * 127.5).astype(np.uint8))
+                imsave("./output/test/fakeA_" + str(i) + ".jpg", ((fake_B_temp[0] + 1) * 127.5).astype(np.uint8))
+                imsave("./output/test/inputA_" + str(i) + ".jpg", ((self.A_input[i][0] + 1) * 127.5).astype(np.uint8))
+                imsave("./output/test/inputB_" + str(i) + ".jpg", ((self.B_input[i][0] + 1) * 127.5).astype(np.uint8))
 
 
 def main():
     model = CycleGAN()
-    # if to_train:
-    # model.train()
-    if to_test:
-        model.test()
+    if to_train:
+        model.train()
+    # if to_test:
+    #     model.test()
 
 
 if __name__ == '__main__':
