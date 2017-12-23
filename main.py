@@ -356,10 +356,10 @@ class CycleGAN():
 
 def main():
     model = CycleGAN()
-    if to_train:
-        model.train()
-    # if to_test:
-    #     model.test()
+    # if to_train:
+        # model.train()
+    if to_test:
+        model.test()
 
 
 if __name__ == '__main__':
