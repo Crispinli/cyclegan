@@ -76,8 +76,8 @@ def discriminator(inputdisc, name="discriminator"):
     with tf.variable_scope(name):
         f = 4
 
-        # patch_input = tf.random_crop(inputdisc, [1, 70, 70, 3])
-        _, o_c1 = conv2d(inputdisc, ndf, f, f, 2, 2, 0.02, "SAME", "d1", do_norm=False, relufactor=0.2)
+        patch_input = tf.random_crop(inputdisc, [1, 70, 70, 3])
+        _, o_c1 = conv2d(patch_input, ndf, f, f, 2, 2, 0.02, "SAME", "d1", do_norm=False, relufactor=0.2)
         _, o_c2 = conv2d(o_c1, ndf * 2, f, f, 2, 2, 0.02, "SAME", "d2", relufactor=0.2)
         _, o_c3 = conv2d(o_c2, ndf * 4, f, f, 2, 2, 0.02, "SAME", "d3", relufactor=0.2)
         _, o_c4 = conv2d(o_c3, ndf * 8, f, f, 1, 1, 0.02, "SAME", "d4", relufactor=0.2)

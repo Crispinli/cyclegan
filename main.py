@@ -3,7 +3,7 @@
     （1）模型整体结构：
         a. 整体结构类似 CycleGAN 模型，并且进行了改进
         b. 模型中的包含两个 GAN 模型，并同时进行训练
-        c. 首先对其中一个 GAN 的判别器进行 1 次训练，然后对生成器进行一次训练，之后是以相同方式训练另一个 GAN
+        c. 首先对其中一个 GAN 的判别器进行 5 次训练，然后对生成器进行 1 次训练，之后是以相同方式训练另一个 GAN
         d. 每个 GAN 当中的生成器 generator 和判别器 discriminator 的结构相同
     （2）生成器 generator 的结构：
         a. 整体结构类似 U-Net 模型的形式，并且进行了改进
@@ -12,7 +12,7 @@
     （3）判别器 discriminator 结构：
         a. 整体结构为全卷积网络 FCN 的形式
         b. 输出是一个经过编码操作的图像块
-        c. 输入是整个图像，尺寸为 [1, 256, 256, 3]
+        c. 输入是图像块 image patch 的形式，尺寸为 [1, 70, 70, 3]
     （4）模型的损失函数：
         a. 两个 GAN 的损失函数具有相同的形式
         b. 损失函数类似 WGAN_GP 的形式，并且进行了改进
@@ -21,7 +21,6 @@
 import numpy as np
 from scipy.misc import imsave
 import os
-import random
 import tensorflow as tf
 from model import generator
 from model import discriminator
@@ -42,7 +41,7 @@ ckpt_dir = "./output/checkpoint"  # 检查点路径
 max_images = 1000  # 数组中最多存储的训练/测试数据（batch_size, img_height, img_width, img_layer）数目
 pool_size = 50  # 用于更新D的假图像的批次数
 max_epoch = 20  # 每次训练的epoch数目
-n_critic = 1  # 判别器训练的次数
+n_critic = 5  # 判别器训练的次数
 
 save_training_images = True  # 是否存储训练数据
 
@@ -99,9 +98,6 @@ class CycleGAN():
         self.input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
         self.input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
 
-        self.fake_pool_A = tf.placeholder(tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_A")
-        self.fake_pool_B = tf.placeholder(tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_B")
-
         self.num_fake_inputs = 0
 
         self.lr = tf.placeholder(tf.float32, shape=[], name="lr")
@@ -120,11 +116,6 @@ class CycleGAN():
             self.fake_rec_B = discriminator(self.fake_B, "d_B")
             self.cyc_A = generator(self.fake_B, "g_B")
             self.cyc_B = generator(self.fake_A, "g_A")
-
-            scope.reuse_variables()
-
-            self.fake_pool_rec_A = discriminator(self.fake_pool_A, "d_A")
-            self.fake_pool_rec_B = discriminator(self.fake_pool_B, "d_B")
 
     def loss_calc(self):
 
@@ -214,21 +205,6 @@ class CycleGAN():
             imsave("./output/imgs/inputB_" + str(epoch) + "_" + str(i) + ".jpg",
                    ((self.B_input[i][0] + 1) * 127.5).astype(np.uint8))
 
-    def fake_image_pool(self, num_fakes, fake, fake_pool):
-
-        if (num_fakes < pool_size):
-            fake_pool[num_fakes] = fake
-            return fake
-        else:
-            p = random.random()
-            if p > 0.5:
-                random_id = random.randint(0, pool_size - 1)
-                temp = fake_pool[random_id]
-                fake_pool[random_id] = fake
-                return temp
-            else:
-                return fake
-
     def train(self):
 
         ''' Training Function '''
@@ -270,17 +246,13 @@ class CycleGAN():
                     summary_str = None
 
                     # Optimizing the D_B network
-                    for i in range(n_critic):
-                        iter = (ptr + i) if (ptr + i) < 100 else (ptr + i) - 100
-                        fake_B = sess.run(self.fake_B, feed_dict={self.input_A: self.A_input[iter]})
-                        fake_B_temp = self.fake_image_pool(self.num_fake_inputs, fake_B, self.fake_images_B)
+                    for _ in range(n_critic):
                         _, summary_str = sess.run(
                             [self.d_B_trainer, self.d_B_loss_summ],
                             feed_dict={
-                                self.input_A: self.A_input[iter],
-                                self.input_B: self.B_input[iter],
-                                self.lr: curr_lr,
-                                self.fake_pool_B: fake_B_temp}
+                                self.input_A: self.A_input[ptr],
+                                self.input_B: self.B_input[ptr],
+                                self.lr: curr_lr}
                         )
                     writer.add_summary(summary_str, epoch * max_images + ptr)
 
@@ -295,17 +267,13 @@ class CycleGAN():
                     writer.add_summary(summary_str, epoch * max_images + ptr)
 
                     # Optimizing the D_A network
-                    for i in range(n_critic):
-                        iter = (ptr + i) if (ptr + i) < 100 else (ptr + i) - 100
-                        fake_A = sess.run(self.fake_A, feed_dict={self.input_B: self.B_input[iter]})
-                        fake_A_temp = self.fake_image_pool(self.num_fake_inputs, fake_A, self.fake_images_A)
+                    for _ in range(n_critic):
                         _, summary_str = sess.run(
                             [self.d_A_trainer, self.d_A_loss_summ],
                             feed_dict={
-                                self.input_A: self.A_input[iter],
-                                self.input_B: self.B_input[iter],
-                                self.lr: curr_lr,
-                                self.fake_pool_A: fake_A_temp}
+                                self.input_A: self.A_input[ptr],
+                                self.input_B: self.B_input[ptr],
+                                self.lr: curr_lr}
                         )
                     writer.add_summary(summary_str, epoch * max_images + ptr)
 
