@@ -38,11 +38,11 @@ def generator(inputgen, name="generator"):
         back0 = LAMBDA * (denorm0 - inputgen)
 
         norm2, o_c2 = conv2d(o_c1, ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "encoder2", relufactor=0.2)
-        denorm1, _ = deconv2d(o_c2, [batch_size, 256, 256, ngf], ngf, ks, ks, 2, 2, 0.02, "SAME", "denorm1")
+        denorm1, _ = deconv2d(o_c2, ngf, ks, ks, 2, 2, 0.02, "SAME", "denorm1")
         back1 = LAMBDA * (denorm1 - norm1)
 
         norm3, o_c3 = conv2d(o_c2, ngf * 4, ks, ks, 2, 2, 0.02, "SAME", "encoder3", relufactor=0.2)
-        denorm2, _ = deconv2d(o_c3, [batch_size, 128, 128, ngf * 2], ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "denorm2")
+        denorm2, _ = deconv2d(o_c3, ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "denorm2")
         back2 = LAMBDA * (denorm2 - norm2)
 
         o_r1 = resnet_block(o_c3, ngf * 4, "r1")
@@ -55,11 +55,11 @@ def generator(inputgen, name="generator"):
         o_r8 = resnet_block(o_r7, ngf * 4, "r8")
         o_r9 = resnet_block(o_r8, ngf * 4, "r9")
 
-        norm4, _ = deconv2d(o_r9, [batch_size, 128, 128, ngf * 2], ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "decoder1")
+        norm4, _ = deconv2d(o_r9, ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "decoder1")
         o_c4_c2 = tf.concat(axis=3, values=[norm4, back2])
         _, o_c4 = conv2d(o_c4_c2, ngf * 2, ks, ks, 1, 1, 0.02, "SAME", "o_c4_merge")
 
-        norm5, _ = deconv2d(o_c4, [batch_size, 256, 256, ngf], ngf, ks, ks, 2, 2, 0.02, "SAME", "decoder2")
+        norm5, _ = deconv2d(o_c4, ngf, ks, ks, 2, 2, 0.02, "SAME", "decoder2")
         o_c5_c1 = tf.concat(axis=3, values=[norm5, back1])
         _, o_c5 = conv2d(o_c5_c1, ngf, ks, ks, 1, 1, 0.02, "SAME", "o_c5_merge")
 

@@ -74,9 +74,6 @@ class CycleGAN():
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        self.fake_images_A = np.zeros((pool_size, 1, img_height, img_width, img_layer))
-        self.fake_images_B = np.zeros((pool_size, 1, img_height, img_width, img_layer))
-
         self.A_input = np.zeros((max_images, batch_size, img_height, img_width, img_layer))
         self.B_input = np.zeros((max_images, batch_size, img_height, img_width, img_layer))
 
@@ -97,9 +94,6 @@ class CycleGAN():
 
         self.input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
         self.input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
-
-        self.num_fake_inputs = 0
-
         self.lr = tf.placeholder(tf.float32, shape=[], name="lr")
 
         with tf.variable_scope("Model") as scope:
@@ -122,7 +116,7 @@ class CycleGAN():
         ####################
         # cycle loss
         ####################
-        cyc_loss = tf.reduce_mean(tf.abs(self.input_A - self.cyc_A)) + tf.reduce_mean(tf.abs(self.input_B - self.cyc_B))
+        cyc_loss = tf.reduce_mean(tf.abs(self.input_A - self.cyc_A) + tf.abs(self.input_B - self.cyc_B))
 
         ####################
         # standard generator loss of g_A and g_B
@@ -287,7 +281,6 @@ class CycleGAN():
                     )
                     writer.add_summary(summary_str, epoch * max_images + ptr)
 
-                    self.num_fake_inputs += 1
                 print("Save the model...")
                 saver.save(sess, os.path.join(ckpt_dir, "cyclegan"), global_step=epoch)
 
