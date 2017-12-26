@@ -131,7 +131,7 @@ class CycleGAN():
         ####################
         # cycle loss
         ####################
-        cyc_loss = tf.reduce_mean(tf.abs(self.input_A - self.cyc_A)) + tf.reduce_mean(tf.abs(self.input_B - self.cyc_B))
+        cyc_loss = tf.reduce_mean(tf.abs(self.input_A - self.cyc_A) + tf.abs(self.input_B - self.cyc_B))
 
         ####################
         # standard generator loss of g_A and g_B
