@@ -170,7 +170,7 @@ class CycleGAN():
         self.d_loss_A = disc_loss_A  # d_A的损失函数
         self.d_loss_B = disc_loss_B  # d_B的损失函数
 
-        optimizer = tf.train.AdamOptimizer(self.lr, beta1=0.5, beta2=0.99)
+        optimizer = tf.train.RMSPropOptimizer(learning_rate=self.lr)
 
         self.model_vars = tf.trainable_variables()
 
