@@ -58,10 +58,12 @@ def generator(inputgen, name="generator"):
         norm4, _ = deconv2d(o_r9, ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "decoder1")
         o_c4_c2 = tf.concat(axis=3, values=[norm4, back2])
         _, o_c4 = conv2d(o_c4_c2, ngf * 2, ks, ks, 1, 1, 0.02, "SAME", "o_c4_merge")
+        o_c4 = tf.nn.dropout(x=o_c4, keep_prob=0.7)
 
         norm5, _ = deconv2d(o_c4, ngf, ks, ks, 2, 2, 0.02, "SAME", "decoder2")
         o_c5_c1 = tf.concat(axis=3, values=[norm5, back1])
         _, o_c5 = conv2d(o_c5_c1, ngf, ks, ks, 1, 1, 0.02, "SAME", "o_c5_merge")
+        o_c5 = tf.nn.dropout(x=o_c5, keep_prob=0.7)
 
         norm6, _ = conv2d(o_c5, img_layer, f, f, 1, 1, 0.02, "SAME", "output")
         o_c6_input = tf.concat(axis=3, values=[norm6, back0])
