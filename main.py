@@ -8,7 +8,7 @@
     （2）生成器 generator 的结构：
         a. 整体结构类似 U-Net 模型的形式，并且进行了改进
         b. 在模型的 bottom 部分，包含 9 个残差块
-        c. 在 encoder 部分，下一层结果的转置卷积与上一层的结果相减，然后再与 decoder 部分的对应结果进行拼接
+        c. 在 encoder 部分，编码结果直接与 decoder 部分的对应结果进行拼接
     （3）判别器 discriminator 结构：
         a. 整体结构为全卷积网络 FCN 的形式
         b. 输出是一个经过编码操作的图像块
@@ -17,6 +17,9 @@
         a. 两个 GAN 的损失函数具有相同的形式
         b. 损失函数类似 WGAN_GP 的形式，并且进行了改进
         c. 判别器损失的计算方式不变，在生成器损失中加入 cycle loss 项
+    （5）最优化算法：
+        a. RMSPropOptimizer算法
+        b. 学习率0.0002
 '''
 import numpy as np
 from scipy.misc import imsave
@@ -106,7 +109,7 @@ class CycleGAN():
 
         self.lr = tf.placeholder(tf.float32, shape=[], name="lr")
 
-        with tf.variable_scope("Model") as scope:
+        with tf.variable_scope("drugan") as scope:
             self.scope = scope
 
             self.fake_B = generator(self.input_A, name="g_A")
@@ -266,7 +269,6 @@ class CycleGAN():
                     self.save_training_images(sess, epoch)
                 for ptr in range(0, max_images):
                     print("In the iteration ", ptr)
-
                     summary_str = None
 
                     # Optimizing the D_B network
@@ -321,7 +323,7 @@ class CycleGAN():
 
                     self.num_fake_inputs += 1
                 print("Save the model...")
-                saver.save(sess, os.path.join(ckpt_dir, "cyclegan"), global_step=epoch)
+                saver.save(sess, os.path.join(ckpt_dir, "drugan"), global_step=epoch)
 
     def test(self):
 
