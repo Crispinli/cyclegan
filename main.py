@@ -7,7 +7,7 @@
         d. 每个 GAN 当中的生成器 generator 和判别器 discriminator 的结构相同
     （2）生成器 generator 的结构：
         a. 整体结构类似 U-Net 模型的形式，并且进行了改进
-        b. 在模型的 bottom 部分，包含 9 个残差块
+        b. 在模型的 bottom 部分，包含 6 个残差块
         c. 在 encoder 部分，编码结果直接与 decoder 部分的对应结果进行拼接
     （3）判别器 discriminator 结构：
         a. 整体结构为全卷积网络 FCN 的形式
@@ -139,13 +139,13 @@ class CycleGAN():
         ####################
         # standard generator loss of g_A and g_B
         ####################
-        gen_loss_A = -tf.reduce_mean(self.fake_rec_B)
-        gen_loss_B = -tf.reduce_mean(self.fake_rec_A)
+        gen_loss_A = tf.reduce_mean(self.fake_rec_B)
+        gen_loss_B = tf.reduce_mean(self.fake_rec_A)
 
         ####################
         # discriminator loss with gradient penalty of d_B
         ####################
-        disc_loss_B = tf.reduce_mean(self.fake_pool_rec_B) - tf.reduce_mean(self.rec_B)
+        disc_loss_B = -tf.reduce_mean(self.fake_pool_rec_B) + tf.reduce_mean(self.rec_B)
         alpha_B = tf.random_uniform(shape=[batch_size, 1], minval=0.0, maxval=1.0)
         interpolates_B = self.input_B + alpha_B * (self.fake_B - self.input_B)
         with tf.variable_scope(self.scope) as scope_B:
@@ -158,7 +158,7 @@ class CycleGAN():
         ####################
         # discriminator loss with gradient penalty of d_A
         ####################
-        disc_loss_A = tf.reduce_mean(self.fake_pool_rec_A) - tf.reduce_mean(self.rec_A)
+        disc_loss_A = -tf.reduce_mean(self.fake_pool_rec_A) + tf.reduce_mean(self.rec_A)
         alpha_A = tf.random_uniform(shape=[batch_size, 1], minval=0.0, maxval=1.0)
         interpolates_A = self.input_A + alpha_A * (self.fake_A - self.input_A)
         with tf.variable_scope(self.scope) as scope_A:
