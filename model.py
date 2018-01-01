@@ -63,7 +63,7 @@ def generator(inputgen, name="generator"):
 
 def discriminator(inputdisc, name="discriminator"):
     with tf.variable_scope(name):
-        f = 4
+        f = 3
 
         patch_input = tf.random_crop(inputdisc, [1, 70, 70, 3])
         _, o_c1 = conv2d(patch_input, ndf, f, f, 2, 2, 0.02, "SAME", "disc1", do_norm=False, relufactor=0.2)

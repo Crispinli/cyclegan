@@ -2,9 +2,9 @@
 算法描述：
     （1）模型整体结构：
         a. 整体结构类似 CycleGAN 模型，并且进行了改进
-        b. 模型中的包含两个 GAN 模型，并同时进行训练
-        c. 首先对其中一个 GAN 的判别器进行 5 次训练，然后对生成器进行 1 次训练，之后是以相同方式训练另一个 GAN
-        d. 每个 GAN 当中的生成器 generator 和判别器 discriminator 的结构相同
+        b. 模型中的包含两个 GAN 模型，并同时进行优化
+        c. 两个 GAN 当中的生成器 generator 和判别器 discriminator 的结构相同
+        d. 对每个 GAN 的判别器进行 3 次优化，然后对生成器进行 1 次优化
     （2）生成器 generator 的结构：
         a. 整体结构类似 U-Net 模型的形式，并且进行了改进
         b. 在模型的 bottom 部分，包含 6 个残差块
@@ -17,9 +17,10 @@
         a. 两个 GAN 的损失函数具有相同的形式
         b. 损失函数类似 WGAN_GP 的形式，并且进行了改进
         c. 判别器损失的计算方式不变，在生成器损失中加入 cycle loss 项
-    （5）最优化算法：
-        a. RMSPropOptimizer算法
-        b. 学习率0.0002
+    （5）模型训练策略：
+        a. 最优化算法采用 tf.train.RMSPropOptimizer 算法
+        b. 一次训练会进行 20 个 epoch，每个 epoch 中进行 1000 次迭代
+        c. 学习率 0.0002，每个 epoch 中学习率减小 0.00001
 '''
 import numpy as np
 from scipy.misc import imsave
@@ -45,7 +46,7 @@ ckpt_dir = "./output/checkpoint"  # 检查点路径
 max_images = 1000  # 数组中最多存储的训练/测试数据（batch_size, img_height, img_width, img_layer）数目
 pool_size = 50  # 用于更新D的假图像的批次数
 max_epoch = 20  # 每次训练的epoch数目
-n_critic = 5  # 判别器训练的次数
+n_critic = 3  # 判别器训练的次数
 
 save_training_images = True  # 是否存储训练数据
 
@@ -173,7 +174,7 @@ class CycleGAN():
         self.d_loss_A = disc_loss_A  # d_A的损失函数
         self.d_loss_B = disc_loss_B  # d_B的损失函数
 
-        optimizer = tf.train.RMSPropOptimizer(learning_rate=self.lr)
+        optimizer = tf.train.RMSPropOptimizer(self.lr)
 
         self.model_vars = tf.trainable_variables()
 
@@ -358,10 +359,10 @@ class CycleGAN():
 
 def main():
     model = CycleGAN()
-    if to_train:
-        model.train()
-    # if to_test:
-    #     model.test()
+    # if to_train:
+    #     model.train()
+    if to_test:
+        model.test()
 
 
 if __name__ == '__main__':
