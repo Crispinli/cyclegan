@@ -55,8 +55,8 @@ class CycleGAN():
     def input_setup(self):
 
         # 获取图像的名字，得到文件名列表
-        self.filenames_A = tf.train.match_filenames_once("./input/horse2zebra/trainA/*.jpg")
-        self.filenames_B = tf.train.match_filenames_once("./input/horse2zebra/trainB/*.jpg")
+        self.filenames_A = tf.train.match_filenames_once("./input/monet2photo/trainA/*.jpg")
+        self.filenames_B = tf.train.match_filenames_once("./input/monet2photo/trainB/*.jpg")
 
         # 把文件名列表转换成队列
         filename_queue_A = tf.train.string_input_producer(self.filenames_A)
@@ -270,7 +270,16 @@ class CycleGAN():
                     self.save_training_images(sess, epoch)
                 for ptr in range(0, max_images):
                     print("In the iteration ", ptr)
-                    summary_str = None
+
+                    # Optimizing the G_A network
+                    _, summary_str = sess.run(
+                        [self.g_A_trainer, self.g_A_loss_summ],
+                        feed_dict={
+                            self.input_A: self.A_input[ptr],
+                            self.input_B: self.B_input[ptr],
+                            self.lr: curr_lr}
+                    )
+                    writer.add_summary(summary_str, epoch * max_images + ptr)
 
                     # Optimizing the D_B network
                     for i in range(n_critic):
@@ -287,9 +296,9 @@ class CycleGAN():
                         )
                     writer.add_summary(summary_str, epoch * max_images + ptr)
 
-                    # Optimizing the G_A network
+                    # Optimizing the G_B network
                     _, summary_str = sess.run(
-                        [self.g_A_trainer, self.g_A_loss_summ],
+                        [self.g_B_trainer, self.g_B_loss_summ],
                         feed_dict={
                             self.input_A: self.A_input[ptr],
                             self.input_B: self.B_input[ptr],
@@ -310,16 +319,6 @@ class CycleGAN():
                                 self.lr: curr_lr,
                                 self.fake_pool_A: fake_A_temp}
                         )
-                    writer.add_summary(summary_str, epoch * max_images + ptr)
-
-                    # Optimizing the G_B network
-                    _, summary_str = sess.run(
-                        [self.g_B_trainer, self.g_B_loss_summ],
-                        feed_dict={
-                            self.input_A: self.A_input[ptr],
-                            self.input_B: self.B_input[ptr],
-                            self.lr: curr_lr}
-                    )
                     writer.add_summary(summary_str, epoch * max_images + ptr)
 
                     self.num_fake_inputs += 1
@@ -359,10 +358,10 @@ class CycleGAN():
 
 def main():
     model = CycleGAN()
-    # if to_train:
-    #     model.train()
-    if to_test:
-        model.test()
+    if to_train:
+        model.train()
+    # if to_test:
+    #     model.test()
 
 
 if __name__ == '__main__':

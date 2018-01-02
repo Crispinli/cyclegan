@@ -43,8 +43,11 @@ def generator(inputgen, name="generator"):
         o_r4 = resnet_block(o_r3, ngf * 4, "r4")
         o_r5 = resnet_block(o_r4, ngf * 4, "r5")
         o_r6 = resnet_block(o_r5, ngf * 4, "r6")
+        o_r7 = resnet_block(o_r6, ngf * 4, "r7")
+        o_r8 = resnet_block(o_r7, ngf * 4, "r8")
+        o_r9 = resnet_block(o_r8, ngf * 4, "r9")
 
-        norm4, _ = deconv2d(o_r6, ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "decoder1")
+        norm4, _ = deconv2d(o_r9, ngf * 2, ks, ks, 2, 2, 0.02, "SAME", "decoder1")
         o_c4_c2 = tf.concat(axis=3, values=[norm4, norm2])
         _, o_c4 = conv2d(o_c4_c2, ngf * 2, ks, ks, 1, 1, 0.02, "SAME", "o_c4_merge")
 
