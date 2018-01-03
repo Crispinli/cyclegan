@@ -18,7 +18,7 @@
         b. 损失函数类似 WGAN_GP 的形式，并且进行了改进
         c. 判别器损失的计算方式不变，在生成器损失中加入 cycle loss 项
     （5）模型训练策略：
-        a. 最优化算法采用 tf.train.AdamOptimizer 算法
+        a. 最优化算法采用 tf.train.RMSPropOptimizer 算法
         b. 一次训练会进行 20 个 epoch，每个 epoch 中进行 1000 次迭代
         c. 学习率 1e-4
 '''
@@ -174,7 +174,7 @@ class CycleGAN():
         self.d_loss_A = disc_loss_A  # d_A的损失函数
         self.d_loss_B = disc_loss_B  # d_B的损失函数
 
-        optimizer = tf.train.AdamOptimizer(self.lr, beta1=0, beta2=0.9)
+        optimizer = tf.train.RMSPropOptimizer(self.lr)
 
         self.model_vars = tf.trainable_variables()
 
@@ -283,7 +283,7 @@ class CycleGAN():
 
                     # Optimizing the D_B network
                     for i in range(n_critic):
-                        iter = (ptr + i) if (ptr + i) < 100 else (ptr + i) - 100
+                        iter = (ptr + i) if (ptr + i) < 1000 else (ptr + i) - 1000
                         fake_B = sess.run(self.fake_B, feed_dict={self.input_A: self.A_input[iter]})
                         fake_B_temp = self.fake_image_pool(self.num_fake_inputs, fake_B, self.fake_images_B)
                         _, summary_str = sess.run(
@@ -308,7 +308,7 @@ class CycleGAN():
 
                     # Optimizing the D_A network
                     for i in range(n_critic):
-                        iter = (ptr + i) if (ptr + i) < 100 else (ptr + i) - 100
+                        iter = (ptr + i) if (ptr + i) < 1000 else (ptr + i) - 1000
                         fake_A = sess.run(self.fake_A, feed_dict={self.input_B: self.B_input[iter]})
                         fake_A_temp = self.fake_image_pool(self.num_fake_inputs, fake_A, self.fake_images_A)
                         _, summary_str = sess.run(
