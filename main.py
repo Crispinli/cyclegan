@@ -18,9 +18,9 @@
         b. 损失函数类似 WGAN_GP 的形式，并且进行了改进
         c. 判别器损失的计算方式不变，在生成器损失中加入 cycle loss 项
     （5）模型训练策略：
-        a. 最优化算法采用 tf.train.RMSPropOptimizer 算法
+        a. 最优化算法采用 tf.train.AdamOptimizer 算法
         b. 一次训练会进行 20 个 epoch，每个 epoch 中进行 1000 次迭代
-        c. 学习率 0.0002，每个 epoch 中学习率减小 0.00001
+        c. 学习率 1e-4
 '''
 import numpy as np
 from scipy.misc import imsave
@@ -55,8 +55,8 @@ class CycleGAN():
     def input_setup(self):
 
         # 获取图像的名字，得到文件名列表
-        self.filenames_A = tf.train.match_filenames_once("./input/monet2photo/trainA/*.jpg")
-        self.filenames_B = tf.train.match_filenames_once("./input/monet2photo/trainB/*.jpg")
+        self.filenames_A = tf.train.match_filenames_once("./input/horse2zebra/trainA/*.jpg")
+        self.filenames_B = tf.train.match_filenames_once("./input/horse2zebra/trainB/*.jpg")
 
         # 把文件名列表转换成队列
         filename_queue_A = tf.train.string_input_producer(self.filenames_A)
@@ -140,13 +140,13 @@ class CycleGAN():
         ####################
         # standard generator loss of g_A and g_B
         ####################
-        gen_loss_A = tf.reduce_mean(self.fake_rec_B)
-        gen_loss_B = tf.reduce_mean(self.fake_rec_A)
+        gen_loss_A = -tf.reduce_mean(self.fake_rec_B)
+        gen_loss_B = -tf.reduce_mean(self.fake_rec_A)
 
         ####################
         # discriminator loss with gradient penalty of d_B
         ####################
-        disc_loss_B = -tf.reduce_mean(self.fake_pool_rec_B) + tf.reduce_mean(self.rec_B)
+        disc_loss_B =  tf.reduce_mean(self.fake_pool_rec_B) - tf.reduce_mean(self.rec_B)
         alpha_B = tf.random_uniform(shape=[batch_size, 1], minval=0.0, maxval=1.0)
         interpolates_B = self.input_B + alpha_B * (self.fake_B - self.input_B)
         with tf.variable_scope(self.scope) as scope_B:
@@ -159,7 +159,7 @@ class CycleGAN():
         ####################
         # discriminator loss with gradient penalty of d_A
         ####################
-        disc_loss_A = -tf.reduce_mean(self.fake_pool_rec_A) + tf.reduce_mean(self.rec_A)
+        disc_loss_A = tf.reduce_mean(self.fake_pool_rec_A) - tf.reduce_mean(self.rec_A)
         alpha_A = tf.random_uniform(shape=[batch_size, 1], minval=0.0, maxval=1.0)
         interpolates_A = self.input_A + alpha_A * (self.fake_A - self.input_A)
         with tf.variable_scope(self.scope) as scope_A:
@@ -174,7 +174,7 @@ class CycleGAN():
         self.d_loss_A = disc_loss_A  # d_A的损失函数
         self.d_loss_B = disc_loss_B  # d_B的损失函数
 
-        optimizer = tf.train.RMSPropOptimizer(self.lr)
+        optimizer = tf.train.AdamOptimizer(self.lr, beta1=0, beta2=0.9)
 
         self.model_vars = tf.trainable_variables()
 
@@ -262,9 +262,9 @@ class CycleGAN():
                 if chkpt_fname is not None:
                     saver.restore(sess, chkpt_fname)
             print("Training Loop...")
+            curr_lr = 1e-4
             for epoch in range(0, max_epoch):
                 print("In the epoch ", epoch)
-                curr_lr = 0.0002 - epoch * 0.00001
                 if (save_training_images):
                     print("Save the training images...")
                     self.save_training_images(sess, epoch)
