@@ -1,8 +1,8 @@
 import tensorflow as tf
 
 
-def leaky_relu(x, leak=0.2):
-    return tf.maximum(x, leak * x)
+def lrelu(x, leak=0.2, name="lrelu"):
+        return tf.maximum(x, leak * x)
 
 
 def instance_norm(x):
@@ -16,59 +16,25 @@ def instance_norm(x):
         return out
 
 
-def layer_norm(x):
-    with tf.variable_scope("layer_norm"):
-        epsilon = 1e-5
-        mean, var = tf.nn.moments(x, [1, 2, 3], keep_dims=True)
-        scale = tf.get_variable("scale", [x.get_shape()[-1]],
-                                initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.02))
-        offset = tf.get_variable("offset", [x.get_shape()[-1]], initializer=tf.constant_initializer(0.0))
-        out = scale * tf.div(x - mean, tf.sqrt(var + epsilon)) + offset
-        return out
-
-
-def conv2d(inputconv,
-           o_d=64,
-           f_h=7,
-           f_w=7,
-           s_h=1,
-           s_w=1,
-           stddev=0.02,
-           padding="VALID",
-           name="conv2d",
-           do_norm=True,
-           do_relu=True,
-           relufactor=0):
+def conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding="VALID", name="conv2d",
+           do_norm=True, do_relu=True, relufactor=0):
     with tf.variable_scope(name):
         conv = tf.contrib.layers.conv2d(inputconv, o_d, f_w, s_w, padding, activation_fn=None,
                                         weights_initializer=tf.truncated_normal_initializer(stddev=stddev),
                                         biases_initializer=tf.constant_initializer(0.0))
         if do_norm:
-            if "disc" in name:
-                conv = layer_norm(conv)
-            else:
-                conv = instance_norm(conv)
+            conv = instance_norm(conv)
         relu_conv = conv
         if do_relu:
             if (relufactor == 0):
-                relu_conv = tf.nn.relu(conv)
+                relu_conv = tf.nn.relu(conv, "relu")
             else:
-                relu_conv = leaky_relu(conv, relufactor)
+                relu_conv = lrelu(conv, relufactor, "lrelu")
         return conv, relu_conv
 
 
-def deconv2d(inputconv,
-             o_d=64,
-             f_h=7,
-             f_w=7,
-             s_h=1,
-             s_w=1,
-             stddev=0.02,
-             padding="VALID",
-             name="deconv2d",
-             do_norm=True,
-             do_relu=True,
-             relufactor=0):
+def deconv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding="VALID",
+             name="deconv2d", do_norm=True, do_relu=True, relufactor=0):
     with tf.variable_scope(name):
         conv = tf.contrib.layers.conv2d_transpose(inputconv, o_d, [f_h, f_w], [s_h, s_w], padding, activation_fn=None,
                                                   weights_initializer=tf.truncated_normal_initializer(stddev=stddev),
@@ -78,7 +44,7 @@ def deconv2d(inputconv,
         relu_conv = conv
         if do_relu:
             if (relufactor == 0):
-                relu_conv = tf.nn.relu(conv)
+                relu_conv = tf.nn.relu(conv, "relu")
             else:
-                relu_conv = leaky_relu(conv, relufactor)
+                relu_conv = lrelu(conv, relufactor, "lrelu")
         return conv, relu_conv

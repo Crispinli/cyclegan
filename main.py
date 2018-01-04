@@ -4,7 +4,7 @@
         a. 整体结构类似 CycleGAN 模型，并且进行了改进
         b. 模型中的包含两个 GAN 模型，并同时进行优化
         c. 两个 GAN 当中的生成器 generator 和判别器 discriminator 的结构相同
-        d. 对每个 GAN 的生成器进行 1 次优化，然后对判别器进行 3 次优化
+        d. 对每个 GAN 的判别器进行 1 次优化，然后对生成器进行 1 次优化
     （2）生成器 generator 的结构：
         a. 整体结构类似 U-Net 模型的形式，并且进行了改进
         b. 在模型的 bottom 部分，包含 9 个残差块
@@ -12,30 +12,23 @@
     （3）判别器 discriminator 结构：
         a. 整体结构为全卷积网络 FCN 的形式
         b. 输出是一个经过编码操作的图像块
-        c. 输入是图像块 image patch 的形式，尺寸为 [1, 70, 70, 3]
+        c. 输入是全图像的形式，尺寸为 [1, 256, 256, 3]
     （4）模型的损失函数：
         a. 两个 GAN 的损失函数具有相同的形式
         b. 损失函数类似 WGAN_GP 的形式，并且进行了改进
         c. 判别器损失的计算方式不变，在生成器损失中加入 cycle loss 项
     （5）模型训练策略：
-        a. 最优化算法采用 tf.train.RMSPropOptimizer 算法
+        a. 最优化算法采用 tf.train.AdamOptimizer 算法
         b. 一次训练会进行 20 个 epoch，每个 epoch 中进行 1000 次迭代
-        c. 学习率 1e-4
+        c. 学习率 2e-4，每进行一个 epoch 的训练，学习率减少 1e-5
 '''
 import numpy as np
 from scipy.misc import imsave
 import os
 import random
-import tensorflow as tf
-from model import generator
 from model import discriminator
-
-img_height = 256  # 图像高度
-img_width = 256  # 图像宽度
-img_layer = 3  # 图像通道
-img_size = img_height * img_width  # 图像尺寸
-
-batch_size = 1  # 一个批次的数据中图像的个数
+from model import generator
+import tensorflow as tf
 
 to_train = True  # 是否训练
 to_test = True  # 是否测试
@@ -46,12 +39,18 @@ ckpt_dir = "./output/checkpoint"  # 检查点路径
 max_images = 1000  # 数组中最多存储的训练/测试数据（batch_size, img_height, img_width, img_layer）数目
 pool_size = 50  # 用于更新D的假图像的批次数
 max_epoch = 20  # 每次训练的epoch数目
-n_critic = 3  # 判别器训练的次数
+n_critic = 1  # 判别器训练的次数
+
+img_height = 256  # 图像高度
+img_width = 256  # 图像宽度
+img_layer = 3  # 图像通道
+img_size = img_height * img_width  # 图像尺寸
+batch_size = 1  # 一个批次的数据中图像的个数
 
 save_training_images = True  # 是否存储训练数据
 
 
-class CycleGAN():
+class DRUGAN():
     def input_setup(self):
 
         # 获取图像的名字，得到文件名列表
@@ -146,7 +145,7 @@ class CycleGAN():
         ####################
         # discriminator loss with gradient penalty of d_B
         ####################
-        disc_loss_B =  tf.reduce_mean(self.fake_pool_rec_B) - tf.reduce_mean(self.rec_B)
+        disc_loss_B = tf.reduce_mean(self.fake_pool_rec_B) - tf.reduce_mean(self.rec_B)
         alpha_B = tf.random_uniform(shape=[batch_size, 1], minval=0.0, maxval=1.0)
         interpolates_B = self.input_B + alpha_B * (self.fake_B - self.input_B)
         with tf.variable_scope(self.scope) as scope_B:
@@ -174,7 +173,7 @@ class CycleGAN():
         self.d_loss_A = disc_loss_A  # d_A的损失函数
         self.d_loss_B = disc_loss_B  # d_B的损失函数
 
-        optimizer = tf.train.RMSPropOptimizer(self.lr)
+        optimizer = tf.train.AdamOptimizer(self.lr, beta1=0.5, beta2=0.99)
 
         self.model_vars = tf.trainable_variables()
 
@@ -262,24 +261,16 @@ class CycleGAN():
                 if chkpt_fname is not None:
                     saver.restore(sess, chkpt_fname)
             print("Training Loop...")
-            curr_lr = 1e-4
             for epoch in range(0, max_epoch):
                 print("In the epoch ", epoch)
+                curr_lr = 0.0002 - epoch * 0.00001
                 if (save_training_images):
                     print("Save the training images...")
                     self.save_training_images(sess, epoch)
                 for ptr in range(0, max_images):
                     print("In the iteration ", ptr)
 
-                    # Optimizing the G_A network
-                    _, summary_str = sess.run(
-                        [self.g_A_trainer, self.g_A_loss_summ],
-                        feed_dict={
-                            self.input_A: self.A_input[ptr],
-                            self.input_B: self.B_input[ptr],
-                            self.lr: curr_lr}
-                    )
-                    writer.add_summary(summary_str, epoch * max_images + ptr)
+                    summary_str = None
 
                     # Optimizing the D_B network
                     for i in range(n_critic):
@@ -296,9 +287,9 @@ class CycleGAN():
                         )
                     writer.add_summary(summary_str, epoch * max_images + ptr)
 
-                    # Optimizing the G_B network
+                    # Optimizing the G_A network
                     _, summary_str = sess.run(
-                        [self.g_B_trainer, self.g_B_loss_summ],
+                        [self.g_A_trainer, self.g_A_loss_summ],
                         feed_dict={
                             self.input_A: self.A_input[ptr],
                             self.input_B: self.B_input[ptr],
@@ -319,6 +310,16 @@ class CycleGAN():
                                 self.lr: curr_lr,
                                 self.fake_pool_A: fake_A_temp}
                         )
+                    writer.add_summary(summary_str, epoch * max_images + ptr)
+
+                    # Optimizing the G_B network
+                    _, summary_str = sess.run(
+                        [self.g_B_trainer, self.g_B_loss_summ],
+                        feed_dict={
+                            self.input_A: self.A_input[ptr],
+                            self.input_B: self.B_input[ptr],
+                            self.lr: curr_lr}
+                    )
                     writer.add_summary(summary_str, epoch * max_images + ptr)
 
                     self.num_fake_inputs += 1
@@ -357,7 +358,7 @@ class CycleGAN():
 
 
 def main():
-    model = CycleGAN()
+    model = DRUGAN()
     if to_train:
         model.train()
     # if to_test:
