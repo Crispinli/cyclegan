@@ -263,7 +263,7 @@ class DRUGAN():
             print("Training Loop...")
             for epoch in range(0, max_epoch):
                 print("In the epoch ", epoch)
-                curr_lr = 0.0002 - epoch * 0.00001
+                curr_lr = 2e-4 - epoch * 1e-5
                 if (save_training_images):
                     print("Save the training images...")
                     self.save_training_images(sess, epoch)
