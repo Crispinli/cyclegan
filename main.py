@@ -204,9 +204,9 @@ class DRUGAN():
                 [self.fake_A, self.fake_B, self.cyc_A, self.cyc_B],
                 feed_dict={self.input_A: self.A_input[i], self.input_B: self.B_input[i]}
             )
-            imsave("./output/imgs/fakeB_" + str(epoch) + "_" + str(i) + ".jpg",
-                   ((fake_A_temp[0] + 1) * 127.5).astype(np.uint8))
             imsave("./output/imgs/fakeA_" + str(epoch) + "_" + str(i) + ".jpg",
+                   ((fake_A_temp[0] + 1) * 127.5).astype(np.uint8))
+            imsave("./output/imgs/fakeB_" + str(epoch) + "_" + str(i) + ".jpg",
                    ((fake_B_temp[0] + 1) * 127.5).astype(np.uint8))
             imsave("./output/imgs/cycA_" + str(epoch) + "_" + str(i) + ".jpg",
                    ((cyc_A_temp[0] + 1) * 127.5).astype(np.uint8))
